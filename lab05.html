@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <p> ПОСТРОЕНИЕ МНОГОУГОЛЬНИКА С ПОМОЩЬЮ НАЖАТИЙ КЛАВИШ</p>
+        ------------------------ЛКМ и ПКМ => построение полигона------------------------</p>
+        ----------------------------ЛКМ*2 => заполнение полигона---------------------------
+    </p>
+</head>
+<BODY>
+<canvas id="canvas" width="500" height="500" style='border:5px solid #ff00ff'>
+</canvas>
+<script>
+
+    var lineCross = (x1, y1, x2, y2, x3, y3, x4, y4) => {
+        var delta_x12 = x2 - x1;
+        var delta_y12 = y2 - y1;
+        var delta_x13 = x1 - x3;
+        var delta_y13 = y1 - y3;
+        var delta_x34 = x4 - x3;
+        var delta_y34 = y4 - y3;
+        var s = (-delta_y12 * delta_x13 + delta_x12 * delta_y13) / (-delta_x34 * delta_y12 + delta_x12 * delta_y34);
+        var t = (+delta_x34 * delta_y13 - delta_y34 * delta_x13) / (-delta_x34 * delta_y12 + delta_x12 * delta_y34);
+        return (s >= 0 && s <= 1 && t >= 0 && t <= 1) ? [x1 + t * delta_x12, y1 + t * delta_y12] : false;
+    }
+
+    function Line(ctx, x0, y0, x1, y1) {
+        var delta_x = Math.abs(x1 - x0), delta_y = Math.abs(y1 - y0);
+        var delta_max = Math.max(delta_x, delta_y), delta_min = Math.min(delta_x, delta_y);
+        var direct_x = 1, direct_y = 1;
+        var eps = 0;
+        var s = 1;
+        var k = 2 * delta_min;
+        if (x1 < x0) direct_x = -1;
+        if (y1 < y0) direct_y = -1;
+        if (delta_y <= delta_x) {
+            var y = y0;
+            for (var x = x0; x * direct_x <= x1 * direct_x; x += direct_x) {
+                ctx.fillRect(x * s, y * s, 1 * s, 1 * s);
+                eps = eps + k;
+                if (eps > delta_max) {
+                    y += direct_y;
+                    eps = eps - 2 * delta_max;
+                }
+            }
+        } else {
+            var x = x0;
+            for (var y = y0; y * direct_y <= y1 * direct_y; y += direct_y) {
+                ctx.fillRect(x * s, y * s, 1 * s, 1 * s);
+                eps = eps + k;
+                if (eps > delta_max) {
+                    x += direct_x;
+                    eps = eps - 2 * delta_max;
+                }
+            }
+        }
+    }
+</script>
+<script>
+
+    var canvas = document.getElementById("canvas");
+    var ctx = canvas.getContext("2d");
+
+    let w = canvas.width
+    let h = canvas.height
+    var status = 0;
+    var start_x0, start_y0;
+    var start_x, start_y;
+    var end_x, end_y;
+    var lines = new Map()
+    var points = new Map()
+
+    canvas.addEventListener("click", function (click) {
+        if (status == 0) {
+            start_x0 = click.offsetX;
+            start_y0 = click.offsetY;
+            start_x = click.offsetX;
+            start_y = click.offsetY;
+            status = 1;
+        } else if (status == 1) {
+            end_x = click.offsetX;
+            end_y = click.offsetY;
+            Line(ctx, start_x0, start_y0, end_x, end_y);
+            lines.set([start_x0, start_y0], [end_x, end_y]);
+            start_x0 = click.offsetX;
+            start_y0 = click.offsetY;
+            status = 1;
+        } else if (status == 2) {
+            for (var y = 0; y < w; y++) {
+                 for (var key of lines.keys()) {
+                    ctx.fillStyle = '#ff0000'
+                    if (lineCross(0, y, w, y, key[0], key[1], lines.get(key)[0], lines.get(key)[1]) !== false) {
+                        [X, Y] = lineCross(0, y, w, y, key[0], key[1], lines.get(key)[0], lines.get(key)[1]);
+                        if (points.has(y)) {
+                            points.get(y).push(X);
+                            points.get(y).push(Y);
+                        } else {
+                            points.set(y, [X, Y]);
+                        }
+                    }
+                }
+            }
+            ctx.fillStyle = '#000000'
+            for (var y0 of points.keys()) {
+                for (var i = 0; i < points.get(y0).length - 1; i += 4) {
+                    Line(ctx, points.get(y0)[i], y0, points.get(y0)[i + 2], points.get(y0)[i + 3]);
+                    Line(ctx, points.get(y0)[i], y0, points.get(y0)[i + 2], points.get(y0)[i + 3]);
+                    Line(ctx, points.get(y0)[i], y0, points.get(y0)[i + 2], points.get(y0)[i + 3]);
+                    Line(ctx, points.get(y0)[i], y0, points.get(y0)[i + 2], points.get(y0)[i + 3]);
+                    Line(ctx, points.get(y0)[i], y0, points.get(y0)[i + 2], points.get(y0)[i + 3]);
+                }
+
+            }
+            status = 5;
+        }
+
+    });
+
+    canvas.addEventListener('contextmenu', function (click) {
+        if (status == 1) {
+            Line(ctx, start_x0, start_y0, start_x, start_y);
+            lines.set([start_x0, start_y0], [start_x, start_y])
+            status = 2;
+        }
+    });
+
+</script>
+</BODY>
+</html>
